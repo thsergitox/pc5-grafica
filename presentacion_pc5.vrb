@@ -1,0 +1,30 @@
+\frametitle{Renderizado y Animación con Three.js}
+\begin{lstlisting}[language=Java, basicstyle=\tiny]
+// Loop de renderizado principal
+function animate() {
+    requestAnimationFrame(animate);
+
+    // Actualizar animaciones del modelo
+    if (mixer) {
+        const delta = clock.getDelta();
+        mixer.update(delta);
+    }
+
+    // Rotacion suave del personaje
+    if (stitch && gameActive) {
+        stitch.rotation.y += 0.01;
+
+        // Efecto de flotacion
+        stitch.position.y = Math.sin(Date.now() * 0.001) * 0.05;
+    }
+
+    // Actualizar elementos UI en 3D
+    updateOperationLabels();
+
+    // Renderizar escena
+    renderer.render(scene, camera);
+}
+
+// Iniciar loop de animacion
+animate();
+\end{lstlisting}
