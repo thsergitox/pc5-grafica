@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   soundBackground.volume = 0.3; // La música de fondo más baja para no saturar
 
   // =================================================================================
-  // CONFIGURACIÓN DEL JUEGO (Ajusta estos valores para cambiar la dificultad)
+  // CONFIGURACIÓN DEL JUEGO
   // =================================================================================
   const gameConfig = {
     initialNumber: 10,      // Número con el que empieza el juego.
@@ -29,13 +29,15 @@ document.addEventListener('DOMContentLoaded', () => {
       initialTicks: 200,      // Tiempo inicial en ticks (200 ticks = 20 segundos). Más alto = más fácil.
       maxTicks: 300,          // Tiempo máximo acumulable (30 segundos).
       correctChoiceTickBonus: 30, // Ticks ganados por respuesta correcta (+3 segundos).
-      levelUpScoreBase: 1000, // Puntuación base para subir de nivel.
+      pointsPerCorrectChoice: 100, // Puntos ganados por respuesta correcta.
+      levelUpScoreBase: 500, // Puntuación necesaria para el primer nivel.
+      levelUpMultiplier: 1.5, // Cuánto más difícil se vuelve cada nivel.
       timerInterval: 100,     // Velocidad del temporizador en ms (100ms = 1 tick).
 
       // --- Lógica de Dificultad ---
-      initialAlpha: 1,        // Factor de dificultad inicial (afecta a la cercanía de los resultados). Más bajo = más fácil.
-      alphaIncrement: 0.5,    // Cuánto aumenta la dificultad por nivel.
-      maxAlpha: 5,            // Dificultad máxima.
+      initialAlpha: 0.8,        // Factor de dificultad inicial (más bajo = más fácil).
+      alphaIncrement: 0.1,    // Cuánto aumenta la dificultad por nivel.
+      maxAlpha: 1.5,            // Dificultad máxima.
 
       // --- Parámetros de Operaciones ---
       addTimeRound_Y_MaxBase: 15, // Base para el número a sumar. Más bajo = más fácil.
@@ -49,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Variables del juego
   let currentNumber = gameConfig.initialNumber;
   let currentScore = 0;
+  let nextLevelScore = gameConfig.difficultySettings.levelUpScoreBase;
   let currentTicks = gameConfig.difficultySettings.initialTicks; // 15 segundos iniciales
   let currentLevel = 1;
   let isAddTimeRound = true;
@@ -224,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
     display: none; /* Oculto inicialmente */
   `;
 
-  // Indicador de detección de silla
+  // Indicador de detección de stitch
   const stichIndicator = document.createElement('div');
   stichIndicator.style.cssText = `
     position: fixed;
@@ -242,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
     z-index: 1001;
     display: none;
   `;
-  stichIndicator.textContent = 'Mueve la silla para elegir';
+  stichIndicator.textContent = 'Mueve la stitch para elegir';
 
   // Línea separadora central
   const centerLine = document.createElement('div');
@@ -306,6 +309,41 @@ document.addEventListener('DOMContentLoaded', () => {
   `;
   document.body.appendChild(explanationBox);
 
+  // Indicador de Subida de Nivel
+  const levelUpIndicator = document.createElement('div');
+  levelUpIndicator.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 30px;
+    background-color: rgba(78, 205, 196, 1);
+    color: white;
+    border: 5px solid white;
+    border-radius: 20px;
+    font-size: 48px;
+    font-weight: bold;
+    text-align: center;
+    z-index: 2000;
+    display: none; /* Oculto inicialmente */
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+    animation: levelUpAnimation 1.5s ease-out forwards;
+  `;
+  document.body.appendChild(levelUpIndicator);
+
+  // Animación para el indicador de subida de nivel
+  const levelUpStyle = document.createElement('style');
+  levelUpStyle.textContent = `
+    @keyframes levelUpAnimation {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+      80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+    }
+  `;
+  document.head.appendChild(levelUpStyle);
+
   // Agregar elementos al DOM
   gameContainer.appendChild(centralNumber);
   gameContainer.appendChild(leftCard);
@@ -320,48 +358,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Funciones de generación de operaciones
   const generateAddTimeRound = () => {
-    // Lógica mejorada para que las opciones sean más competitivas
-    const Y = Math.floor(Math.random() * (gameConfig.difficultySettings.addTimeRound_Y_MaxBase + currentLevel * gameConfig.difficultySettings.addTimeRound_Y_LevelMultiplier)) + 1;
-    const resultAdd = currentNumber + Y;
-
-    // Calcular un multiplicador Z que dé un resultado cercano a la suma
-    // El rango de aleatoriedad se ajusta con 'alpha' (dificultad)
-    const idealMultiplier = resultAdd / currentNumber;
-    const randomFactor = (Math.random() - 0.5) * alpha; // Rango de [-alpha/2, alpha/2]
-    let Z = Math.round(idealMultiplier + randomFactor);
-    Z = Math.max(2, Z); // Asegurarse de que Z sea al menos 2
-
-    leftOperation = { type: 'multiply', value: Z, result: currentNumber * Z };
-    rightOperation = { type: 'add', value: Y, result: resultAdd };
+    // Nueva lógica para que las opciones sean siempre competitivas
+    const Z = Math.floor(Math.random() * 2) + 2; // Multiplicador entre 2 y 3
     
-    leftCard.textContent = `× ${Z}`;
-    rightCard.textContent = `+ ${Y}`;
+    // Generamos un 'Y' que sea competitivo con la multiplicación
+    // El resultado de la suma será currentNumber + Y
+    // El resultado de la multiplicación será currentNumber * Z
+    // Queremos que Y sea cercano a currentNumber * (Z - 1) para que los resultados sean parecidos
+    const idealY = currentNumber * (Z - 1);
+    const randomFactor = (Math.random() - 0.5) * alpha; // Factor de aleatoriedad basado en la dificultad
+    const Y = Math.max(1, Math.floor(idealY * (1 + randomFactor)));
+    
+    const addOperation = { type: 'add', value: Y, result: currentNumber + Y };
+    const multiplyOperation = { type: 'multiply', value: Z, result: currentNumber * Z };
+
+    // Asignar aleatoriamente a izquierda o derecha
+    if (Math.random() > 0.5) {
+      leftOperation = multiplyOperation;
+      rightOperation = addOperation;
+      leftCard.textContent = `× ${Z}`;
+      rightCard.textContent = `+ ${Y}`;
+    } else {
+      leftOperation = addOperation;
+      rightOperation = multiplyOperation;
+      leftCard.textContent = `+ ${Y}`;
+      rightCard.textContent = `× ${Z}`;
+    }
+    
     roundTypeIndicator.textContent = 'Ronda: SUMA vs MULTIPLICACIÓN';
     roundTypeIndicator.style.backgroundColor = 'rgba(0, 128, 0, 0.8)';
   };
 
   const generateSubtractTimeRound = () => {
-    // Lógica mejorada para que las opciones sean más competitivas
-    const maxY = Math.min(currentNumber - 1, gameConfig.difficultySettings.subtractTimeRound_Y_MaxBase + currentLevel * gameConfig.difficultySettings.subtractTimeRound_Y_LevelMultiplier);
-    if (maxY < 1) { // Si no se puede restar, forzar una ronda de suma
-        generateAddTimeRound();
-        isAddTimeRound = false; // Para que la siguiente sea de resta
-        return;
-    }
-    const Y = Math.floor(Math.random() * maxY) + 1;
-    const resultSubtract = currentNumber - Y;
+    // Nueva lógica para que las opciones sean siempre competitivas
+    const Z = Math.floor(Math.random() * 3) + 2; // Divisor entre 2 y 4
 
-    // Calcular un divisor Z que dé un resultado cercano a la resta
-    const idealDivisor = resultSubtract > 0 ? currentNumber / resultSubtract : 2;
+    // Queremos que el resultado de la resta (currentNumber - Y) sea cercano a la división (currentNumber / Z)
+    // Para ello, Y debe ser cercano a currentNumber * (1 - 1/Z)
+    const idealY = currentNumber * (1 - 1 / Z);
     const randomFactor = (Math.random() - 0.5) * alpha;
-    let Z = Math.round(idealDivisor + randomFactor);
-    Z = Math.max(2, Z); // Asegurarse de que Z sea al menos 2
-
-    leftOperation = { type: 'divide', value: Z, result: Math.floor(currentNumber / Z) };
-    rightOperation = { type: 'subtract', value: Y, result: resultSubtract };
+    const Y = Math.max(1, Math.floor(idealY * (1 + randomFactor)));
     
-    leftCard.textContent = `÷ ${Z}`;
-    rightCard.textContent = `− ${Y}`;
+    // Asegurarse de que el número no sea negativo
+    if (Y >= currentNumber) {
+      generateAddTimeRound(); // Si no se puede restar, forzar ronda de suma
+      isAddTimeRound = false;
+      return;
+    }
+    
+    const subtractOperation = { type: 'subtract', value: Y, result: currentNumber - Y };
+    const divideOperation = { type: 'divide', value: Z, result: Math.floor(currentNumber / Z) };
+
+    // Asignar aleatoriamente a izquierda o derecha
+    if (Math.random() > 0.5) {
+      leftOperation = divideOperation;
+      rightOperation = subtractOperation;
+      leftCard.textContent = `÷ ${Z}`;
+      rightCard.textContent = `− ${Y}`;
+    } else {
+      leftOperation = subtractOperation;
+      rightOperation = divideOperation;
+      leftCard.textContent = `− ${Y}`;
+      rightCard.textContent = `÷ ${Z}`;
+    }
+
     roundTypeIndicator.textContent = 'Ronda: RESTA vs DIVISIÓN';
     roundTypeIndicator.style.backgroundColor = 'rgba(128, 0, 0, 0.8)';
   };
@@ -434,6 +494,10 @@ document.addEventListener('DOMContentLoaded', () => {
       
       console.log('¡DING! Elección correcta');
       soundCorrect.play();
+      
+      // Actualizar puntuación acumulada
+      currentScore += gameConfig.difficultySettings.pointsPerCorrectChoice * currentLevel;
+
     } else {
       // Elección incorrecta
       centralNumber.style.backgroundColor = 'rgba(255, 0, 0, 0.9)';
@@ -444,15 +508,23 @@ document.addEventListener('DOMContentLoaded', () => {
       soundIncorrect.play();
     }
     
-    // Actualizar puntuación
-    currentScore = currentTicks;
-    
     // Verificar subida de nivel
-    if (currentScore >= gameConfig.difficultySettings.levelUpScoreBase * currentLevel) {
+    if (currentScore >= nextLevelScore) {
       currentLevel++;
       alpha = Math.min(alpha + gameConfig.difficultySettings.alphaIncrement, gameConfig.difficultySettings.maxAlpha); // Incrementar dificultad
       console.log(`¡Nivel ${currentLevel}!`);
+      
+      // Recargar tiempo y mostrar feedback
+      currentTicks = gameConfig.difficultySettings.initialTicks;
       soundVictory.play();
+      
+      levelUpIndicator.textContent = `¡Nivel ${currentLevel}!`;
+      levelUpIndicator.style.display = 'block';
+      setTimeout(() => {
+        levelUpIndicator.style.display = 'none';
+      }, 1500); // La duración de la animación
+      
+      nextLevelScore += Math.floor(gameConfig.difficultySettings.levelUpScoreBase * Math.pow(gameConfig.difficultySettings.levelUpMultiplier, currentLevel - 2));
     }
     
     // Restaurar colores después de feedback
@@ -475,6 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Resetear todas las variables del juego
     currentNumber = gameConfig.initialNumber;
     currentScore = 0;
+    nextLevelScore = gameConfig.difficultySettings.levelUpScoreBase;
     currentTicks = gameConfig.difficultySettings.initialTicks;
     currentLevel = 1;
     isAddTimeRound = true;
@@ -560,7 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
             border: 3px solid white;
           ">
             <h1 style="margin: 0 0 20px 0; font-size: 36px;">¡Juego Terminado!</h1>
-            <h2 style="margin: 0 0 15px 0; color: #4ecdc4;">Puntuación Final: ${currentScore}</h2>
+            <h2 style="margin: 0 0 15px 0; color: #4ecdc4;">Puntuación Final: ${Math.floor(currentScore)}</h2>
             <h3 style="margin: 0 0 30px 0; color: #ff6b6b;">Nivel Alcanzado: ${currentLevel}</h3>
             <button id="restartBtn" style="
               padding: 15px 30px;
@@ -603,7 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
     scene.add(light);
 
-    // Cargar modelo de silla
+    // Cargar modelo de stitch
     const raccoon = await loadGLTF('/static/assets/models/stitch/stitch.gltf');
     raccoon.scene.scale.set(1, 1, 1);
     raccoon.scene.position.set(0, -0.4, 0);
@@ -614,7 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const anchor = mindarThree.addAnchor(0);
     anchor.group.add(raccoon.scene);
 
-    // Función para detectar posición de la silla
+    // Función para detectar posición de la stitch
     const detectStichPosition = () => {
       if (anchor.group.visible && gameActive) {
         stichIndicator.style.display = 'block';
@@ -633,7 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Solo procesar si cambió de lado
         if (currentSide !== lastSide && canProcessChoice) {
-          console.log(`Silla detectada en: ${currentSide}`);
+          console.log(`stitch detectado en: ${currentSide}`);
           lastSide = currentSide;
           
           // Procesar elección automáticamente después de un breve delay
@@ -645,7 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Actualizar indicador visual
-        stichIndicator.textContent = `Silla en: ${currentSide.toUpperCase()}`;
+        stichIndicator.textContent = `stitch en: ${currentSide.toUpperCase()}`;
         stichIndicator.style.borderColor = currentSide === 'left' ? '#ff6b6b' : '#4ecdc4';
         stichIndicator.style.backgroundColor = currentSide === 'left' ? 
           'rgba(255, 107, 107, 0.8)' : 'rgba(78, 205, 196, 0.8)';
