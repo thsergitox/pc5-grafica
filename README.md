@@ -35,8 +35,8 @@ Para ejecutar este proyecto localmente, sigue estos pasos:
 
 1.  Clona el repositorio:
     ```bash
-    git clone https://github.com/tu-usuario/tu-repositorio.git
-    cd WebXR-demo2
+    git clone https://github.com/thsergitox/pc5-grafica
+    cd pc5-grafica
     ```
 
 2.  Crea un entorno virtual e instala las dependencias:
@@ -52,5 +52,3 @@ Para ejecutar este proyecto localmente, sigue estos pasos:
     ```
 
 4.  Abre tu navegador y ve a `http://127.0.0.1:5000` (o la dirección que indique la consola).
-
-**Nota:** Asegúrate de reemplazar `https://github.com/tu-usuario/tu-repositorio.git` con la URL real de tu repositorio.
