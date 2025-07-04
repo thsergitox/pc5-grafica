@@ -5,6 +5,17 @@ const THREE = window.MINDAR.IMAGE.THREE;
 
 document.addEventListener('DOMContentLoaded', () => {
   // =================================================================================
+  // CONFIGURACIÓN DE SONIDOS
+  // =================================================================================
+  const soundCorrect = new Audio('/static/assets/sounds/correct.mp3');
+  const soundIncorrect = new Audio('/static/assets/sounds/incorrect.mp3');
+  const soundLose = new Audio('/static/assets/sounds/lose.mp3');
+  const soundVictory = new Audio('/static/assets/sounds/victory.mp3');
+  const soundBackground = new Audio('/static/assets/sounds/theme-background.mp3');
+  soundBackground.loop = true;
+  soundBackground.volume = 0.3; // La música de fondo más baja para no saturar
+
+  // =================================================================================
   // CONFIGURACIÓN DEL JUEGO (Ajusta estos valores para cambiar la dificultad)
   // =================================================================================
   const gameConfig = {
@@ -422,6 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
       currentTicks = Math.min(currentTicks + gameConfig.difficultySettings.correctChoiceTickBonus, gameConfig.difficultySettings.maxTicks); // +3 segundos, máximo 30s
       
       console.log('¡DING! Elección correcta');
+      soundCorrect.play();
     } else {
       // Elección incorrecta
       centralNumber.style.backgroundColor = 'rgba(255, 0, 0, 0.9)';
@@ -429,6 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
       centralNumber.style.transform = 'scale(1.1)';
       
       console.log('¡Error! Elección incorrecta');
+      soundIncorrect.play();
     }
     
     // Actualizar puntuación
@@ -439,6 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
       currentLevel++;
       alpha = Math.min(alpha + gameConfig.difficultySettings.alphaIncrement, gameConfig.difficultySettings.maxAlpha); // Incrementar dificultad
       console.log(`¡Nivel ${currentLevel}!`);
+      soundVictory.play();
     }
     
     // Restaurar colores después de feedback
@@ -502,6 +516,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateDisplay();
     
     // Reiniciar el temporizador del juego
+    soundBackground.currentTime = 0;
+    soundBackground.play();
     startGameTimer();
     
     console.log('Juego reiniciado');
@@ -520,6 +536,8 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (currentTicks <= 0 && gameActive) {
         gameActive = false;
         clearInterval(gameTimer);
+        soundBackground.pause();
+        soundLose.play();
         
         // Ocultar UI del juego
         timeBarContainer.style.display = 'none';
@@ -528,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
         centerLine.style.display = 'none';
         stichIndicator.style.display = 'none';
         detectionIndicator.style.display = 'none';
-        explanationBox.style.display = 'none';
+        explanationBox.style.display = 'block';
 
         // Mostrar pantalla de game over con botón de reinicio mejorado
         gameContainer.style.pointerEvents = 'auto'; // Permitir clics para el botón de reinicio
@@ -724,6 +742,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Inicializar juego y AR
       generateNewRound();
       updateDisplay();
+      soundBackground.play();
       start();
     });
 
