@@ -852,12 +852,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Convertir a coordenadas de pantalla
         const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-        const centerX = window.innerWidth / 2;
+        const threshold = window.innerWidth * 0.2; // 20% de la pantalla (para crear proporción 1/2/2)
         
-        const currentSide = x > centerX ? 'left' : 'right';
+        // Determinar el lado solo si está fuera del threshold central
+        let currentSide = null;
+        if (x < threshold) {
+          currentSide = 'right'; // Recordar que la cámara está invertida
+        } else if (x > window.innerWidth - threshold) {
+          currentSide = 'left'; // Recordar que la cámara está invertida
+        }
         
-        // Solo procesar si cambió de lado
-        if (currentSide !== lastSide && canProcessChoice) {
+        // Solo procesar si hay un lado definido y cambió
+        if (currentSide && currentSide !== lastSide && canProcessChoice) {
           console.log(`stitch detectado en: ${currentSide}`);
           lastSide = currentSide;
           
@@ -867,17 +873,29 @@ document.addEventListener('DOMContentLoaded', () => {
               processChoice(currentSide);
             }
           }, gameConfig.choiceConfirmationDelay); // 500ms de delay para confirmar la posición
+        } else if (!currentSide && lastSide) {
+          // Si volvió al centro, resetear lastSide
+          lastSide = null;
+          console.log('Stitch en zona neutral');
         }
         
         // Actualizar indicador visual
-        stichIndicator.innerHTML = `<span style="font-size: 24px; margin-right: 10px;">${currentSide === 'left' ? '⬅️' : '➡️'}</span>Stitch en: ${currentSide.toUpperCase()}`;
-        stichIndicator.style.borderColor = currentSide === 'left' ? 'rgba(255, 107, 107, 0.5)' : 'rgba(78, 205, 196, 0.5)';
-        stichIndicator.style.background = currentSide === 'left' ? 
-          'linear-gradient(135deg, rgba(255, 107, 107, 0.3), rgba(255, 71, 87, 0.3))' : 
-          'linear-gradient(135deg, rgba(78, 205, 196, 0.3), rgba(69, 183, 175, 0.3))';
-        stichIndicator.style.boxShadow = currentSide === 'left' ?
-          '0 8px 32px rgba(255, 107, 107, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.1)' :
-          '0 8px 32px rgba(78, 205, 196, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.1)';
+        if (currentSide) {
+          stichIndicator.innerHTML = `<span style="font-size: 24px; margin-right: 10px;">${currentSide === 'left' ? '⬅️' : '➡️'}</span>Stitch en: ${currentSide.toUpperCase()}`;
+          stichIndicator.style.borderColor = currentSide === 'left' ? 'rgba(255, 107, 107, 0.5)' : 'rgba(78, 205, 196, 0.5)';
+          stichIndicator.style.background = currentSide === 'left' ? 
+            'linear-gradient(135deg, rgba(255, 107, 107, 0.3), rgba(255, 71, 87, 0.3))' : 
+            'linear-gradient(135deg, rgba(78, 205, 196, 0.3), rgba(69, 183, 175, 0.3))';
+          stichIndicator.style.boxShadow = currentSide === 'left' ?
+            '0 8px 32px rgba(255, 107, 107, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.1)' :
+            '0 8px 32px rgba(78, 205, 196, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.1)';
+        } else {
+          // En zona neutral
+          stichIndicator.innerHTML = `<span style="font-size: 24px; margin-right: 10px;">🎯</span>Mueve más a los lados para elegir`;
+          stichIndicator.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+          stichIndicator.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.2))';
+          stichIndicator.style.boxShadow = '0 8px 32px rgba(255, 255, 255, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.1)';
+        }
       } else {
         stichIndicator.style.display = 'none';
         lastSide = null;
