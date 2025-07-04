@@ -267,7 +267,33 @@ document.addEventListener('DOMContentLoaded', () => {
     display: none; /* Oculto inicialmente */
     box-shadow: 0 5px 20px rgba(0,0,0,0.4);
   `;
-  detectionIndicator.textContent = 'Coloca la tarjeta en el centro para detectar a Stitch';
+  detectionIndicator.textContent = 'Coloca la tarjeta en el centro para detectar a Stitch, en el lado que corresponda';
+
+  // Caja de explicación del juego
+  const explanationBox = document.createElement('div');
+  explanationBox.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    padding: 15px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: 2px solid white;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: left;
+    z-index: 1001;
+    max-width: 250px;
+    display: none; /* Oculto inicialmente */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  `;
+  explanationBox.innerHTML = `
+    <strong>Objetivo:</strong> Elige la operación que dé el mejor resultado.
+    <br/><br/>
+    <strong>Control:</strong> Mueve a Stitch (con la tarjeta) hacia la izquierda o derecha para seleccionar.
+  `;
+  document.body.appendChild(explanationBox);
 
   // Agregar elementos al DOM
   gameContainer.appendChild(centralNumber);
@@ -465,6 +491,8 @@ document.addEventListener('DOMContentLoaded', () => {
     roundTypeIndicator.style.display = 'block';
     stichIndicator.style.display = 'none'; // Se mostrará cuando se detecte el ancla
     centerLine.style.display = 'block';
+    detectionIndicator.style.display = 'none';
+    explanationBox.style.display = 'none';
     
     // Detener animaciones
     timeBarContainer.style.animation = 'none';
@@ -499,6 +527,8 @@ document.addEventListener('DOMContentLoaded', () => {
         roundTypeIndicator.style.display = 'none';
         centerLine.style.display = 'none';
         stichIndicator.style.display = 'none';
+        detectionIndicator.style.display = 'none';
+        explanationBox.style.display = 'none';
 
         // Mostrar pantalla de game over con botón de reinicio mejorado
         gameContainer.style.pointerEvents = 'auto'; // Permitir clics para el botón de reinicio
@@ -689,6 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
       roundTypeIndicator.style.display = 'block';
       centerLine.style.display = 'block';
       detectionIndicator.style.display = 'block';
+      explanationBox.style.display = 'block';
       
       // Inicializar juego y AR
       generateNewRound();
